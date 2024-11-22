@@ -4,7 +4,7 @@ from torchvision import transforms as T
 from datasets import FrameVideoDataset
 from model3d import TheConvolver3D
 import torch.optim as optim
-
+import wandb
 root_dir = "/dtu/blackhole/0d/203501/Data/IDLCV/ufc10"
 
 transform = T.Compose([
