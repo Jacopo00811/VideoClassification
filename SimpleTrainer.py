@@ -5,7 +5,7 @@ from datasets import FrameVideoDataset
 from model3d import TheConvolver3D
 import torch.optim as optim
 
-root_dir = 'ufc10'
+root_dir = "/dtu/blackhole/0d/203501/Data/IDLCV/ufc10"
 
 transform = T.Compose([
     T.Resize((64, 64)),
@@ -33,8 +33,21 @@ model.to(device)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
-num_epochs = 5  # You can adjust the number of epochs
+num_epochs = 30  # You can adjust the number of epochs
 
+wandb.init(
+    project="IDLCV",
+    config={
+        "learning_rate": optimizer.param_groups[0]['lr'],
+        "architecture": str(model.__class__.__name__),
+        "dataset": str(train_loader.name) if hasattr(train_loader, 'name') else "No dataset name",
+        "epochs": epochs,
+        "batch_size": train_loader.batch_size if hasattr(train_loader, 'batch_size') else "No batchsize",
+        "optimizer": optimizer.__class__.__name__,
+        "loss_fn": model.loss_fn.__class__.__name__ if hasattr(model, "loss_fn") else "No loss function",
+    }
+)
+best_test_accuracy = -float('inf')
 for epoch in range(num_epochs):
     model.train()  # Set the model to training mode
     running_loss = 0.0
@@ -67,9 +80,57 @@ for epoch in range(num_epochs):
         total_predictions += labels.size(0)
         correct_predictions += (predicted == labels).sum().item()
         
-        # Print statistics every 10 batches
-        if (batch_idx + 1) % 10 == 0:
-            print(f'Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], '
-                  f'Loss: {running_loss / 10:.4f}, '
-                  f'Accuracy: {100 * correct_predictions / total_predictions:.2f}%')
-            running_loss = 0.0  # Reset running loss
+        # # Print statistics every 10 batches
+        # if (batch_idx + 1) % 10 == 0:
+        #     print(f'Epoch [{epoch+1}/{num_epochs}], Step [{batch_idx+1}/{len(train_loader)}], '
+        #           f'Loss: {running_loss / 10:.4f}, '
+        #           f'Accuracy: {100 * correct_predictions / total_predictions:.2f}%')
+            # running_loss = 0.0  # Reset running loss
+    # Calculate average loss and accuracy for the epoch
+    avg_train_loss = running_loss / len(train_loader)
+    train_accuracy = 100 * correct_predictions / total_predictions
+
+    # Evaluation phase
+    model.eval()
+    running_loss = 0.0
+    correct_test = 0
+    total_test = 0
+
+    with torch.no_grad():
+        for batch_idx, (inputs, labels) in enumerate(train_loader):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            # Forward pass
+            outputs = model(inputs)
+            
+            # Compute loss
+            loss = criterion(outputs, labels)
+            
+            # Accumulate loss
+            running_loss += loss.item()
+
+            # Calculate accuracy
+            _, predicted = torch.max(outputs.data, 1)
+            correct_test += (predicted == labels).sum().item()
+            total_test += labels.size(0)
+
+    # Calculate average test loss and accuracy for the epoch
+    avg_test_loss = running_loss / len(test_loader)
+    test_accuracy = 100 * correct_test / total_test
+    print(f"Epoch {epoch + 1}/{epochs} | Test Loss: {avg_test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")
+    
+    if test_accuracy > best_test_accuracy:
+        best_test_accuracy = test_accuracy
+        torch.save(model.state_dict(), f"{model.__class__.__name__}_best.pth")
+        print(f"Model saved with Test Accuracy: {test_accuracy:.4f}")
+    # Log metrics to wandb
+    wandb.log({
+        "train_loss": avg_train_loss,
+        "train_accuracy": train_accuracy,
+        "test_loss": avg_test_loss,
+        "test_accuracy": test_accuracy,
+        "learning_rate": optimizer.param_groups[0]['lr']
+    })
+
+wandb.finish()
