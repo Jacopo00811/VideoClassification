@@ -5,15 +5,18 @@ class TheConvolver3D(nn.Module):
         super().__init__()
         
         self.features = nn.Sequential(
-            nn.Conv3d(in_channels=3, out_channels=16, kernel_size=3, padding=1),
+            # Convolution 1
+            nn.Conv3d(in_channels=3, out_channels=16, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm3d(16),
             nn.ReLU(inplace=True),
             nn.MaxPool3d(kernel_size=2, stride=2),
-            nn.Conv3d(16, 32, kernel_size=3, padding=1),
+            # Convolution 2
+            nn.Conv3d(16, 32, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm3d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool3d(kernel_size=2, stride=2),
-            nn.Conv3d(32, 64, kernel_size=3, padding=1),
+            # Convolution 3
+            nn.Conv3d(32, 64, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm3d(64),
             nn.ReLU(inplace=True),
             nn.MaxPool3d(kernel_size=2, stride=2),

@@ -7,7 +7,7 @@ from torchvision import transforms as T
 
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='ufc10',
+    root_dir='/dtu/blackhole/03/148387/ufc10',
     split='train', 
     transform=None
 ):
@@ -42,7 +42,7 @@ class FrameImageDataset(torch.utils.data.Dataset):
 
 class FrameVideoDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir = 'ufc10', 
+    root_dir = '/dtu/blackhole/03/148387/ufc10', 
     split = 'train', 
     transform = None,
     stack_frames = True
@@ -95,7 +95,7 @@ class FrameVideoDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
 
-    root_dir = 'ufc10'
+    root_dir = '/dtu/blackhole/03/148387/ufc10'
 
     transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
     frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
