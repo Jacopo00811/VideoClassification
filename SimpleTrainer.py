@@ -33,7 +33,7 @@ model.to(device)
 criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
 
-num_epochs = 30  # You can adjust the number of epochs
+epochs = 30  # You can adjust the number of epochs
 
 wandb.init(
     project="IDLCV",
@@ -48,7 +48,7 @@ wandb.init(
     }
 )
 best_test_accuracy = -float('inf')
-for epoch in range(num_epochs):
+for epoch in range(epochs):
     model.train()  # Set the model to training mode
     running_loss = 0.0
     correct_predictions = 0
@@ -116,7 +116,7 @@ for epoch in range(num_epochs):
             total_test += labels.size(0)
 
     # Calculate average test loss and accuracy for the epoch
-    avg_test_loss = running_loss / len(test_loader)
+    avg_test_loss = running_loss / len(val_loader)
     test_accuracy = 100 * correct_test / total_test
     print(f"Epoch {epoch + 1}/{epochs} | Test Loss: {avg_test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")
     
