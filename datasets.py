@@ -7,10 +7,12 @@ from torchvision import transforms as T
 
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='/work3/ppar/data/ucf101',
+    root_dir='ufc10',
     split='train', 
     transform=None
 ):
+        path = os.getcwd()
+        root_dir = os.path.join(path, root_dir)
         self.frame_paths = sorted(glob(f'{root_dir}/frames/{split}/*/*/*.jpg'))
         self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
         self.split = split
@@ -40,7 +42,7 @@ class FrameImageDataset(torch.utils.data.Dataset):
 
 class FrameVideoDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir = '/work3/ppar/data/ucf101', 
+    root_dir = 'ufc10', 
     split = 'train', 
     transform = None,
     stack_frames = True
@@ -93,7 +95,7 @@ class FrameVideoDataset(torch.utils.data.Dataset):
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
 
-    root_dir = '/work3/ppar/data/ucf101'
+    root_dir = 'ufc10'
 
     transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
     frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
