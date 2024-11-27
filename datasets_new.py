@@ -5,19 +5,31 @@ import pandas as pd
 from PIL import Image
 import torch
 from torchvision import transforms as T
+import os
 
 import torch.nn.functional as F
 
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='/dtu/datasets1/02516/ucf101_noleakage',
+    root_dir='../../../../../dtu/datasets1/02516/ucf101_noleakage',
     split='train', 
     transform=None
-):      
-        root_dir = root_dir[0]
-        print(root_dir)
-        self.frame_paths = sorted(glob(f'{root_dir}/frames/{split}/*/*/*.jpg'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+): 
+        target_dir = "../../../../dtu/datasets1/02516/ucf101_noleakage"
+
+        # Construct the full file path using os.path.abspath()
+        full_path = os.path.abspath(target_dir)
+
+        # Change the current working directory
+        os.chdir(full_path)
+        
+        # Get the current working directory
+        cwd = os.getcwd()
+        
+        # root_dir = os.path.join(cwd, root_dir)
+        # print(f'{cwd = :}\n\n\n')
+        self.frame_paths = sorted(glob(f'{cwd}/frames/{split}/*/*/*.jpg'))
+        self.df = pd.read_csv(f'{cwd}/metadata/{split}.csv')
         self.split = split
         self.transform = transform
         # breakpoint()
@@ -52,9 +64,20 @@ class FrameVideoDataset(torch.utils.data.Dataset):
     transform = None,
     stack_frames = True
 ):
+        
+        target_dir = "../../../../dtu/datasets1/02516/ucf101_noleakage"
 
-        self.video_paths = sorted(glob(f'{root_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        # Construct the full file path using os.path.abspath()
+        full_path = os.path.abspath(target_dir)
+
+        # Change the current working directory
+        os.chdir(full_path)
+        
+        # Get the current working directory
+        cwd = os.getcwd()
+
+        self.video_paths = sorted(glob(f'{cwd}/videos/{split}/*/*.avi'))
+        self.df = pd.read_csv(f'{cwd}/metadata/{split}.csv')
         self.split = split
         self.transform = transform
         self.stack_frames = stack_frames
@@ -103,9 +126,20 @@ class FlowVideoDataset(torch.utils.data.Dataset):
     split = 'train', 
     resize = (64,64),
 ):
+        
+        target_dir = "../../../../dtu/datasets1/02516/ucf101_noleakage"
 
-        self.video_paths = sorted(glob(f'{root_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        # Construct the full file path using os.path.abspath()
+        full_path = os.path.abspath(target_dir)
+
+        # Change the current working directory
+        os.chdir(full_path)
+        
+        # Get the current working directory
+        cwd = os.getcwd()
+
+        self.video_paths = sorted(glob(f'{cwd}/videos/{split}/*/*.avi'))
+        self.df = pd.read_csv(f'{cwd}/metadata/{split}.csv')
         self.split = split
         self.resize = resize    
         self.n_sampled_frames = 10
