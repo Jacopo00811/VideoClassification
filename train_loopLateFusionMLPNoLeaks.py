@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
-from datasets import FrameVideoDataset
+from datasets_new import FrameVideoDataset
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from late_fusion import LateFusion
@@ -30,7 +30,7 @@ wandb.init(
             "min_lr": 1e-6        # Minimum learning rate
         },
     },
-    name="late_fusionMLP",
+    name="late_fusionMLPNoLeaks",
 )
 
 hyperparameters = {

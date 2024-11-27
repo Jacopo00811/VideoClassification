@@ -2,19 +2,18 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms as T
 from datasets import FrameVideoDataset
+from model3d import TheConvolver3D
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from late_fusion import LateFusion
 import wandb
 import os
-from tqdm import tqdm  # Import tqdm
 
 # Initialize Weights & Biases
 wandb.init(
     project="IDLCV",
     config={
         "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "LateFusion",
+        "architecture": "TheConvolver3D",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
@@ -28,19 +27,12 @@ wandb.init(
             "threshold": 0.01,    # Minimum change to qualify as an improvement
             "verbose": True,
             "min_lr": 1e-6        # Minimum learning rate
-        },
-    },
-    name="late_fusionMLP",
+        }
+    }
 )
 
-hyperparameters = {
-    'num_classes': 10,
-}
-cwd = os.getcwd()
-
 # Define the root directory
-root_dir = os.path.join(cwd, "ufc10")
-# root_dir = "../ufc10"
+root_dir = "/dtu/blackhole/03/148387/ufc10"
 
 # Define transformations with data augmentation (optional)
 transform = T.Compose([
@@ -61,10 +53,10 @@ train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
 # Initialize the model
-model = LateFusion(hyperparameters=hyperparameters, load_pretrained=True, fusion_type='mlp')
+model = TheConvolver3D()
 
 # Move the model to the appropriate device (CPU or GPU)
-device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
 # Define the loss function and optimizer
@@ -97,8 +89,7 @@ for epoch in range(epochs):
     correct_predictions = 0
     total_predictions = 0
     
-    # Add tqdm to the training loop
-    for batch_idx, (inputs, labels) in enumerate(tqdm(train_loader, desc=f"Training Epoch {epoch + 1}/{epochs}")):
+    for batch_idx, (inputs, labels) in enumerate(train_loader):
         # Move inputs and labels to device
         inputs = inputs.to(device)
         labels = labels.to(device)
@@ -134,9 +125,8 @@ for epoch in range(epochs):
     correct_test = 0
     total_test = 0
 
-    # Add tqdm to the validation loop
     with torch.no_grad():
-        for batch_idx, (inputs, labels) in enumerate(tqdm(val_loader, desc=f"Validation Epoch {epoch + 1}/{epochs}")):
+        for batch_idx, (inputs, labels) in enumerate(val_loader):
             inputs = inputs.to(device)
             labels = labels.to(device)
 
@@ -184,6 +174,5 @@ for epoch in range(epochs):
         "test_accuracy": test_accuracy,
         "learning_rate": current_lr
     })
-
 
 wandb.finish()

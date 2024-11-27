@@ -5,19 +5,18 @@ import pandas as pd
 from PIL import Image
 import torch
 from torchvision import transforms as T
-
+import os
 import torch.nn.functional as F
 
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='/dtu/datasets1/02516/ucf101_noleakage',
+    root_dir = 'dtu/datasets1/02516/ucf101_noleakage',
     split='train', 
     transform=None
-):      
-        root_dir = root_dir[0]
-        print(root_dir)
-        self.frame_paths = sorted(glob(f'{root_dir}/frames/{split}/*/*/*.jpg'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+): 
+        target_dir = '/dtu/datasets1/02516/ucf101_noleakage'  # Absolute path starting from root
+        self.frame_paths = sorted(glob(f'{target_dir}/frames/{split}/*/*/*.jpg'))
+        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
         self.split = split
         self.transform = transform
         # breakpoint()
@@ -47,14 +46,18 @@ class FrameImageDataset(torch.utils.data.Dataset):
 
 class FrameVideoDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='dtu/datasets1/02516/ucf101_noleakage',
+    root_dir='/dtu/datasets1/02516/ucf101_noleakage',
     split = 'train', 
     transform = None,
     stack_frames = True
 ):
+        target_dir = '/dtu/datasets1/02516/ucf101_noleakage'  # Absolute path starting from root
 
-        self.video_paths = sorted(glob(f'{root_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        if not os.path.exists(target_dir):
+            raise FileNotFoundError(f"Dataset directory not found: {target_dir}")
+        
+        self.video_paths = sorted(glob(f'{target_dir}/videos/{split}/*/*.avi'))
+        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
         self.split = split
         self.transform = transform
         self.stack_frames = stack_frames
@@ -103,9 +106,11 @@ class FlowVideoDataset(torch.utils.data.Dataset):
     split = 'train', 
     resize = (64,64),
 ):
+        
+        target_dir = "/dtu/datasets1/02516/ucf101_noleakage"
 
-        self.video_paths = sorted(glob(f'{root_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{root_dir}/metadata/{split}.csv')
+        self.video_paths = sorted(glob(f'{target_dir}/videos/{split}/*/*.avi'))
+        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
         self.split = split
         self.resize = resize    
         self.n_sampled_frames = 10
@@ -141,34 +146,34 @@ class FlowVideoDataset(torch.utils.data.Dataset):
 
         return flows.flatten(0,1)
 
-if __name__ == '__main__':
-    from torch.utils.data import DataLoader
+# if __name__ == '__main__':
+#     from torch.utils.data import DataLoader
 
-    root_dir='dtu/datasets1/02516/ucf101_noleakage',
+#     root_dir='dtu/datasets1/02516/ucf101_noleakage',
 
-    transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
-    frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
-    framevideostack_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = True)
-    framevideolist_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = False)
-    flowvideo_dataset = FlowVideoDataset(root_dir=root_dir, split='val', resize=(64,64))
+#     transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
+#     frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
+#     framevideostack_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = True)
+#     framevideolist_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = False)
+#     flowvideo_dataset = FlowVideoDataset(root_dir=root_dir, split='val', resize=(64,64))
 
 
-    frameimage_loader = DataLoader(frameimage_dataset,  batch_size=8, shuffle=False)
-    framevideostack_loader = DataLoader(framevideostack_dataset,  batch_size=8, shuffle=False)
-    framevideolist_loader = DataLoader(framevideolist_dataset,  batch_size=8, shuffle=False)
-    flowvideo_loader = DataLoader(flowvideo_dataset,  batch_size=8, shuffle=False)
+#     frameimage_loader = DataLoader(frameimage_dataset,  batch_size=8, shuffle=False)
+#     framevideostack_loader = DataLoader(framevideostack_dataset,  batch_size=8, shuffle=False)
+#     framevideolist_loader = DataLoader(framevideolist_dataset,  batch_size=8, shuffle=False)
+#     flowvideo_loader = DataLoader(flowvideo_dataset,  batch_size=8, shuffle=False)
 
-    # for frames, labels in frameimage_loader:
-    #     print(frames.shape, labels.shape) # [batch, channels, height, width]
+#     for frames, labels in frameimage_loader:
+#         print(frames.shape, labels.shape) # [batch, channels, height, width]
 
-    # for video_frames, labels in framevideolist_loader:
-    #     print(45*'-')
-    #     for frame in video_frames: # loop through number of frames
-    #         print(frame.shape, labels.shape)# [batch, channels, height, width]
+#     for video_frames, labels in framevideolist_loader:
+#         print(45*'-')
+#         for frame in video_frames: # loop through number of frames
+#             print(frame.shape, labels.shape)# [batch, channels, height, width]
 
-    # for video_frames, labels in framevideostack_loader:
-    #     print(video_frames.shape, labels.shape) # [batch, channels, number of frames, height, width]
+#     for video_frames, labels in framevideostack_loader:
+#         print(video_frames.shape, labels.shape) # [batch, channels, number of frames, height, width]
 
-    for flows, labels in flowvideo_loader:
-        print(flows.shape, labels.shape) # [2 * (number of frames-1) , height, width]
+#     for flows, labels in flowvideo_loader:
+#         print(flows.shape, labels.shape) # [2 * (number of frames-1) , height, width]
             
