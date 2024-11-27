@@ -136,6 +136,9 @@ for epoch in range(epochs):
 
     # Add tqdm to the validation loop
     with torch.no_grad():
+        for batch_idx, (inputs, labels) in enumerate(tqdm(val_loader, desc=f"Validation Epoch {epoch + 1}/{epochs}")):
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
             # Forward pass
             outputs = model(inputs)
