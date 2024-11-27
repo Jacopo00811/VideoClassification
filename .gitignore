@@ -163,8 +163,7 @@ cython_debug/
 
 
 ufc10/
-
 *.DS_Store
 wandb/
-
 saved_models/
+*.sh
