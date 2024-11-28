@@ -187,3 +187,19 @@ for epoch in range(epochs):
 
 
 wandb.finish()
+
+# Could also try this optimizer and scheduler combination
+# def get_optimizer_and_scheduler(model, num_epochs):
+#     optimizer = torch.optim.AdamW(model.parameters(), 
+#                                  lr=1e-4, 
+#                                  weight_decay=0.01)
+    
+#     scheduler = torch.optim.lr_scheduler.OneCycleLR(
+#         optimizer,
+#         max_lr=1e-3,
+#         epochs=num_epochs,
+#         steps_per_epoch=steps_per_epoch,
+#         pct_start=0.1  # 10% warmup
+#     )
+    
+#     return optimizer, scheduler

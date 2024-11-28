@@ -11,18 +11,50 @@ class LateFusion(nn.Module):
         self.load(load_pretrained)
 
         # Remove the final 3 classification layers to get spaital features of 4x4x1024 (H'xW'xD)
-        self.base_model = nn.Sequential(*list(self.model.children())[:-3])
+        if self.fusion_type == "mlp":
+            self.base_model = nn.Sequential(*list(self.model.children())[:-1]) # 2048x1x1
+        elif self.fusion_type == "avg_pool":
+            self.base_model = nn.Sequential(*list(self.model.children())[:-3]) # 1024x4x4
 
         # Fusion and classification layers
         if self.fusion_type == "mlp":
+            # self.fusion_layer = nn.Sequential(
+            #     nn.Flatten(),
+            #     nn.Linear(2048*1*1*10, 4096),
+            #     nn.BatchNorm1d(4096),
+            #     nn.ReLU(),
+            #     nn.Dropout(0.5),
+            #     nn.Linear(4096, 2048),
+            #     nn.BatchNorm1d(2048),
+            #     nn.ReLU(),
+            #     nn.Dropout(0.5),
+            #     nn.Linear(2048, 1024),
+            #     nn.BatchNorm1d(1024),
+            #     nn.ReLU(),
+            #     nn.Dropout(0.5),
+            #     nn.Linear(1024, self.hyperparameters["num_classes"])
+            #     )
             self.fusion_layer = nn.Sequential(
-                nn.Linear(1024 * 4 * 4 * 10, 2048),  # (DxH'xW'xT) 1024*4*4*10
-                nn.Dropout(0.5),
-                nn.Linear(2048, 1024),
-                nn.ReLU(),
-                nn.Dropout(0.5),
-                nn.Linear(1024, self.hyperparameters["num_classes"]),
+                nn.Flatten(),
+                # First reduce spatial dimensions
+                nn.Linear(2048*1*1*10, 8192),
+                nn.LayerNorm(8192),  # LayerNorm more stable than BatchNorm for large nets
+                nn.GELU(),  # GELU often works better than ReLU
+                nn.Dropout(0.3),  # Reduced dropout
+                
+                nn.Linear(8192, 4096),
+                nn.LayerNorm(4096),
+                nn.GELU(),
+                nn.Dropout(0.3),
+                
+                nn.Linear(4096, 1024),
+                nn.LayerNorm(1024),
+                nn.GELU(),
+                nn.Dropout(0.3),
+                
+                nn.Linear(1024, self.hyperparameters["num_classes"])
             )
+
         elif self.fusion_type == "avg_pool":
             self.fusion_layer = nn.Sequential(
                 nn.AdaptiveAvgPool3d(

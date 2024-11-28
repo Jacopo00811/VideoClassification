@@ -4,7 +4,7 @@ from torchvision import transforms as T
 from datasets_new import FrameVideoDataset
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from late_fusion import LateFusion
+from early_fusion import EarlyFusionModel
 import wandb
 import os
 from tqdm import tqdm  # Import tqdm
@@ -14,7 +14,7 @@ wandb.init(
     project="IDLCV",
     config={
         "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "LateFusion",
+        "architecture": "EarlyFusion",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
@@ -30,7 +30,7 @@ wandb.init(
             "min_lr": 1e-6        # Minimum learning rate
         },
     },
-    name="late_fusionMLPNoLeaks",
+    name="early_fusionNoLeaks",
 )
 
 hyperparameters = {
@@ -61,7 +61,7 @@ train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
 # Initialize the model
-model = LateFusion(hyperparameters=hyperparameters, load_pretrained=True, fusion_type='mlp')
+model = EarlyFusionModel(hyperparameters=hyperparameters, load_pretrained=True, use_lstm=False)
 
 # Move the model to the appropriate device (CPU or GPU)
 device = torch.device('cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu')
@@ -83,7 +83,7 @@ scheduler = ReduceLROnPlateau(
 )
 
 # Number of epochs
-epochs = 100  # You can adjust the number of epochs
+epochs = 35  # You can adjust the number of epochs
 
 # To keep track of the best validation accuracy
 best_test_accuracy = -float('inf')
@@ -139,7 +139,7 @@ for epoch in range(epochs):
         for batch_idx, (inputs, labels) in enumerate(tqdm(val_loader, desc=f"Validation Epoch {epoch + 1}/{epochs}")):
             inputs = inputs.to(device)
             labels = labels.to(device)
-
+            
             # Forward pass
             outputs = model(inputs)
             
