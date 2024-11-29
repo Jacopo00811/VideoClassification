@@ -13,7 +13,7 @@ wandb.init(
     project="IDLCV",
     config={
         "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "TheConvolver3D",
+        "architecture": "TheAggregator",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
@@ -29,7 +29,7 @@ wandb.init(
             "min_lr": 1e-6        # Minimum learning rate
         }
     },
-    name="3DConv",
+    name="Aggregation",
 )
 
 # Define the root directory
