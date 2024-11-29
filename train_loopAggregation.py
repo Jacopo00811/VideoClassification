@@ -13,7 +13,7 @@ wandb.init(
     project="IDLCV",
     config={
         "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "TheConvolver3D",
+        "architecture": "Aggregation",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
@@ -29,11 +29,13 @@ wandb.init(
             "min_lr": 1e-6        # Minimum learning rate
         }
     },
-    name="3DConv",
+    name="Aggregation",
 )
 
 # Define the root directory
-root_dir = "/dtu/blackhole/03/148387/ufc10"
+cwd = os.getcwd()
+root_dir = os.path.join(cwd, "ufc10")
+# root_dir = "/dtu/blackhole/03/148387/ufc10"
 
 transform = transforms.Compose([
     transforms.Resize((250, 250)),  # Ensure images are at least slightly larger than crop size
@@ -76,7 +78,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', pa
 # Create save folder
 os.makedirs(os.path.dirname("saved_models"), exist_ok=True)
 
-epochs = 30
+epochs = 35
 
 best_test_accuracy = -float('inf')  # Track the best test loss to save the model
 
