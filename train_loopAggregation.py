@@ -13,7 +13,7 @@ wandb.init(
     project="IDLCV",
     config={
         "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "Aggregation",
+        "architecture": "TheAggregator",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
