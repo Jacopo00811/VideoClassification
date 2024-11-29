@@ -172,7 +172,7 @@ for epoch in range(epochs):
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'accuracy': best_test_accuracy,
-        }, f"saved_models/{model.__class__.__name__}_best.pth")
+        }, f"saved_models/{model.__class__.__name__}NoLeaks_best.pth")
         print(f"Model saved with Test Accuracy: {test_accuracy:.2f}%")
     
     # Log metrics to wandb

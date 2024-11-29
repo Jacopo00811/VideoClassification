@@ -83,7 +83,7 @@ scheduler = ReduceLROnPlateau(
 )
 
 # Number of epochs
-epochs = 100  # You can adjust the number of epochs
+epochs = 35  # You can adjust the number of epochs
 
 # To keep track of the best validation accuracy
 best_test_accuracy = -float('inf')
@@ -172,7 +172,7 @@ for epoch in range(epochs):
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'accuracy': best_test_accuracy,
-        }, f"saved_models/{model.__class__.__name__}_best.pth")
+        }, f"saved_models/{model.__class__.__name__}MLP_best.pth")
         print(f"Model saved with Test Accuracy: {test_accuracy:.2f}%")
     
     # Log metrics to wandb
