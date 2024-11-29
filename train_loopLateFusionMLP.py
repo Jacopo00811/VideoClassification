@@ -13,7 +13,7 @@ from tqdm import tqdm  # Import tqdm
 wandb.init(
     project="IDLCV",
     config={
-        "learning_rate": 0.001,  # Initial learning rate
+        "learning_rate": 0.0001,  # Initial learning rate
         "architecture": "LateFusion",
         "dataset": "ufc10",
         "epochs": 50,
@@ -69,7 +69,7 @@ model.to(device)
 
 # Define the loss function and optimizer
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
 # Define the learning rate scheduler
 scheduler = ReduceLROnPlateau(

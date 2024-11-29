@@ -28,7 +28,8 @@ wandb.init(
             "verbose": True,
             "min_lr": 1e-6        # Minimum learning rate
         }
-    }
+    },
+    name="3DConv",
 )
 
 # Define the root directory
@@ -75,7 +76,7 @@ scheduler = ReduceLROnPlateau(
 )
 
 # Number of epochs
-epochs = 100  # You can adjust the number of epochs
+epochs = 35  # You can adjust the number of epochs
 
 # To keep track of the best validation accuracy
 best_test_accuracy = -float('inf')

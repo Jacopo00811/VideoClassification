@@ -167,3 +167,5 @@ ufc10/
 wandb/
 saved_models/
 *.sh
+*.err
+*.out
