@@ -33,7 +33,9 @@ wandb.init(
 )
 
 # Define the root directory
-root_dir = "/dtu/blackhole/03/148387/ufc10"
+cwd = os.getcwd()
+root_dir = os.path.join(cwd, "ufc10")
+# root_dir = "/dtu/blackhole/03/148387/ufc10"
 
 # Define transformations with data augmentation (optional)
 transform = T.Compose([
