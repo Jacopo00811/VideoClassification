@@ -1,7 +1,3 @@
-# Hello
-
-# Make Early Fusion Model:
-# Importing Required Libraries:
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -52,9 +48,18 @@ class StreamCNN(nn.Module):
             # fc7
             nn.Linear(4096, 2048),
             nn.ReLU(inplace=True),
-            nn.Dropout()
+            nn.Dropout(),
             
+            # Apply softmax
+            nn.Linear(2048, self.num_classes),
+            nn.Softmax(dim=1)
         )
+        
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
         
         #TODO: Load pretrained model method
 
@@ -72,7 +77,7 @@ class TwoStream(nn.Module):
         self.temporal_stream = StreamCNN(hyperparameters, in_channels=(2*(timesteps-1)), load_pretrained=load_pretrained)
         
         # Fusion Layer
-        self.fusion_layer = nn.Lin
+        self.fusion_layer = nn.Linear(2*self.num_classes, self.num_classes)
 
     def forward(self, x_spatial, x_temporal):
         
@@ -80,9 +85,9 @@ class TwoStream(nn.Module):
         spatial_features = self.spatial_stream.features(x_spatial)
         temporal_features = self.temporal_stream.features(x_temporal)
         
-        # Apply softmax to the outputs
-        spatial_features = F.softmax(spatial_features, dim=1)
-        temporal_features = F.softmax(temporal_features, dim=1)
+        # # Apply softmax to the outputs
+        # spatial_features = F.softmax(spatial_features, dim=1)
+        # temporal_features = F.softmax(temporal_features, dim=1)
         
         # Fusion Layer
         x = torch.cat((spatial_features, temporal_features), dim=1)
