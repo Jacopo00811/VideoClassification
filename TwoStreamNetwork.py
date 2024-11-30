@@ -11,7 +11,7 @@ class StreamCNN(nn.Module):
         super(StreamCNN, self).__init__()
         self.num_classes = hyperparameters['num_classes']
         
-        #TODO: Load pretrained model
+        self.load(load_pretrained)
                 
         self.features = nn.Sequential(
         # conv1
@@ -60,8 +60,14 @@ class StreamCNN(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
-        
-        #TODO: Load pretrained model method
+                
+    def load(self, load_pretrained):
+        if load_pretrained:
+            self.model = models.resnet152(weights=models.ResNet152_Weights.DEFAULT)
+        else:
+            self.model = models.resnet152(weights=None)
+
+
 
 class TwoStream(nn.Module):
     def __init__(self, hyperparameters, timesteps, load_pretrained=True):
@@ -90,46 +96,9 @@ class TwoStream(nn.Module):
         # temporal_features = F.softmax(temporal_features, dim=1)
         
         # Fusion Layer
-        x = torch.cat((spatial_features, temporal_features), dim=1)
-        
-        # Classification Layer
-        x = self.classifier(x)
+        combined = torch.cat((spatial_features, temporal_features), dim=1)
+        x = self.fusion_layer(combined)
         
         return x
     
     
-    
-# root_dir = 'ufc10'
-    
-# transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
-# frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
-# framevideostack_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = True)
-# framevideolist_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = False)
-
-
-# frameimage_loader = DataLoader(frameimage_dataset,  batch_size=8, shuffle=False)
-# framevideostack_loader = DataLoader(framevideostack_dataset,  batch_size=8, shuffle=False)
-# framevideolist_loader = DataLoader(framevideolist_dataset,  batch_size=8, shuffle=False)
-# # Initialize the model
-# model = EarlyFusion(num_classes=10)
-
-# # Define a loss function and optimizer
-# criterion = nn.CrossEntropyLoss()
-# optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-# ############################# TESTING #############################
-# if __name__ == '__main__':
-#     # Hyperparameters
-#     hyperparameters = {
-#         'num_classes': 10,
-#     }
-
-#     # Create models with different fusion types
-#     early_fusion_model = EarlyFusionModel(hyperparameters, load_pretrained=True, use_lstm=True)
-
-#     # Input (batch_size, channels, frames, height, width)
-#     x = torch.randn(8, 3, 10, 64, 64)
-
-#     # Test MLP fusion
-#     early_out = early_fusion_model(x)
-#     print("Early Output Shape:", early_out.shape)
