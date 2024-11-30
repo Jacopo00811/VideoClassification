@@ -121,6 +121,57 @@ def train_epoch(model, spatial_loader, flow_loader, criterion, optimizer, device
         
     return total_loss / len(spatial_loader), 100. * correct / total
 
+def validate_epoch(model, spatial_loader, flow_loader, criterion, device):
+    model.eval()  # Set the model to evaluation mode
+    total_loss = 0
+    correct = 0
+    total = 0
+    
+    with torch.no_grad():  # Disable gradient computation during validation
+        for (spatial_frames, _), (flow_frames, labels) in zip(spatial_loader, flow_loader):
+            # Move to device and get dimensions
+            spatial_frames = spatial_frames.to(device)  # [B, C, T, H, W]
+            flow_frames = flow_frames.to(device)       # [B, C_flow, H, W]
+            labels = labels.to(device)
+            
+            B, C, T, H, W = spatial_frames.size()
+            
+            # Handle spatial frames
+            spatial_frames = spatial_frames.transpose(1, 2)  # [B, T, C, H, W]
+            spatial_frames = spatial_frames.reshape(-1, C, H, W)  # [B*T, C, H, W]
+            
+            # Get flow dimensions 
+            B_flow, C_flow, H_flow, W_flow = flow_frames.size()
+            
+            # Handle temporal frames - replicate across time dimension
+            flow_frames = flow_frames.unsqueeze(1)  # [B, 1, C_flow, H, W]
+            flow_frames = flow_frames.expand(-1, T, -1, -1, -1)  # [B, T, C_flow, H, W]
+            flow_frames = flow_frames.reshape(B*T, -1, H_flow, W_flow)  # [B*T, C_flow, H, W]
+            
+            # Resize flow frames to match spatial resolution
+            if H_flow != H or W_flow != W:
+                flow_frames = F.interpolate(flow_frames, size=(H, W), 
+                                          mode='bilinear', align_corners=False)
+            
+            # Forward pass
+            outputs = model(spatial_frames, flow_frames)  # [B*T, num_classes]
+            
+            # Average predictions across time dimension
+            outputs = outputs.view(B, T, -1)  # [B, T, num_classes]
+            outputs = outputs.mean(dim=1)     # [B, num_classes]
+            
+            # Compute loss
+            loss = criterion(outputs, labels)
+            
+            # Update metrics
+            total_loss += loss.item()
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+        
+    return (total_loss / len(spatial_loader), 
+            100. * correct / total)
+
 def main():
     wandb.init(project="IDLCV", config=config, name="two_streamNoLeaks")
     
@@ -157,12 +208,19 @@ def main():
             model, spatial_loader, flow_loader, 
             criterion, optimizer, device
         )
+
+        val_loss, val_acc = validate_epoch(
+            model, spatial_loader, flow_loader, 
+            criterion, device
+        )
         
         # Log metrics
         wandb.log({
             "train_loss": train_loss,
             "train_acc": train_acc,
-            "epoch": epoch
+            "epoch": epoch, 
+            "val_loss": val_loss,
+            "val_acc": val_acc
         })
         
         # Save checkpoint if best accuracy
