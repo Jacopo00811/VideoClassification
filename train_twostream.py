@@ -122,7 +122,7 @@ def train_epoch(model, spatial_loader, flow_loader, criterion, optimizer, device
     return total_loss / len(spatial_loader), 100. * correct / total
 
 def main():
-    wandb.init(project="two_stream", config=config, name="two_stream")
+    wandb.init(project="IDLCV", config=config, name="two_streamNoLeaks")
     
     # Setup
     device = config['device']
@@ -173,7 +173,7 @@ def main():
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'best_acc': best_acc,
-            }, 'best_model.pth')
+            }, 'saved_models/TwoStream_best_model.pth')
         
         # Update learning rate
         scheduler.step(train_acc)
