@@ -168,3 +168,5 @@ wandb/
 saved_models/
 *.sh
 *.pth
+*.err
+*.out

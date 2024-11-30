@@ -13,8 +13,8 @@ from tqdm import tqdm  # Import tqdm
 wandb.init(
     project="IDLCV",
     config={
-        "learning_rate": 0.001,  # Initial learning rate
-        "architecture": "LateFusion",
+        "learning_rate": 0.0001,  # Initial learning rate
+        "architecture": "LateFusionMLP",
         "dataset": "ufc10",
         "epochs": 50,
         "batch_size": 8,
@@ -69,7 +69,7 @@ model.to(device)
 
 # Define the loss function and optimizer
 criterion = torch.nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
 
 # Define the learning rate scheduler
 scheduler = ReduceLROnPlateau(
@@ -83,7 +83,7 @@ scheduler = ReduceLROnPlateau(
 )
 
 # Number of epochs
-epochs = 100  # You can adjust the number of epochs
+epochs = 35  # You can adjust the number of epochs
 
 # To keep track of the best validation accuracy
 best_test_accuracy = -float('inf')
@@ -172,7 +172,7 @@ for epoch in range(epochs):
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(),
             'accuracy': best_test_accuracy,
-        }, f"saved_models/{model.__class__.__name__}_best.pth")
+        }, f"saved_models/{model.__class__.__name__}MLP_best.pth")
         print(f"Model saved with Test Accuracy: {test_accuracy:.2f}%")
     
     # Log metrics to wandb
@@ -187,3 +187,19 @@ for epoch in range(epochs):
 
 
 wandb.finish()
+
+# Could also try this optimizer and scheduler combination
+# def get_optimizer_and_scheduler(model, num_epochs):
+#     optimizer = torch.optim.AdamW(model.parameters(), 
+#                                  lr=1e-4, 
+#                                  weight_decay=0.01)
+    
+#     scheduler = torch.optim.lr_scheduler.OneCycleLR(
+#         optimizer,
+#         max_lr=1e-3,
+#         epochs=num_epochs,
+#         steps_per_epoch=steps_per_epoch,
+#         pct_start=0.1  # 10% warmup
+#     )
+    
+#     return optimizer, scheduler

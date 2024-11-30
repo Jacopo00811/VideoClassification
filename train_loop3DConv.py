@@ -28,11 +28,14 @@ wandb.init(
             "verbose": True,
             "min_lr": 1e-6        # Minimum learning rate
         }
-    }
+    },
+    name="3DConv",
 )
 
 # Define the root directory
-root_dir = "/dtu/blackhole/03/148387/ufc10"
+cwd = os.getcwd()
+root_dir = os.path.join(cwd, "ufc10")
+# root_dir = "/dtu/blackhole/03/148387/ufc10"
 
 # Define transformations with data augmentation (optional)
 transform = T.Compose([
