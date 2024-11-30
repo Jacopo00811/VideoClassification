@@ -83,7 +83,9 @@ class TwoStream(nn.Module):
         self.temporal_stream = StreamCNN(hyperparameters, in_channels=(2*(timesteps-1)), load_pretrained=load_pretrained)
         
         # Fusion Layer
-        self.fusion_layer = nn.Linear(2*self.num_classes, self.num_classes)
+        # self.fusion_layer = nn.Linear(2*self.num_classes, self.num_classes)
+        feature_size = 512 * 7 * 7
+        self.fusion_layer = nn.Linear(feature_size * 2, self.num_classes)
 
     def forward(self, x_spatial, x_temporal):
         
@@ -94,6 +96,13 @@ class TwoStream(nn.Module):
         # # Apply softmax to the outputs
         # spatial_features = F.softmax(spatial_features, dim=1)
         # temporal_features = F.softmax(temporal_features, dim=1)
+        
+        # Flatten features
+        spatial_features = spatial_features.view(spatial_features.size(0), -1)  # [320, 25088]
+        temporal_features = temporal_features.view(temporal_features.size(0), -1)  # [320, 25088]
+        
+        # print(f"Spatial features shape: {spatial_features.shape}")
+        # print(f"Temporal features shape: {temporal_features.shape}")
         
         # Fusion Layer
         combined = torch.cat((spatial_features, temporal_features), dim=1)

@@ -1,9 +1,10 @@
 import os
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.transforms as T
-from datasets import FrameVideoDataset, FlowVideoDataset
+from datasets_new import FrameVideoDataset, FlowVideoDataset
 from TwoStreamNetwork import TwoStream
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import wandb
@@ -54,27 +55,13 @@ def get_dataloaders(root_dir, batch_size, num_frames):
     spatial_transform, flow_transform = get_transforms()
     
     # Create datasets
-    spatial_dataset = FrameVideoDataset(
-        root_dir=os.path.join(root_dir, "frames"),
-        transform=spatial_transform
-    )
-    
-    flow_dataset = FlowVideoDataset(
-        flow_dir=os.path.join(root_dir, "flows"),
-        num_frames=num_frames,
-        transform=flow_transform
-    )
+    spatial_dataset = FrameVideoDataset(root_dir=os.path.join(root_dir, "frames"))
+    flow_dataset = FlowVideoDataset(root_dir=os.path.join(root_dir, "flows"))
     
     # Create dataloaders
-    spatial_loader = DataLoader(spatial_dataset, 
-                              batch_size=batch_size,
-                              shuffle=True, 
-                              num_workers=4)
+    spatial_loader = DataLoader(spatial_dataset, batch_size=batch_size, shuffle=True)
     
-    flow_loader = DataLoader(flow_dataset, 
-                           batch_size=batch_size,
-                           shuffle=True, 
-                           num_workers=4)
+    flow_loader = DataLoader(flow_dataset, batch_size=batch_size, shuffle=True)
     
     return spatial_loader, flow_loader
 
@@ -85,14 +72,45 @@ def train_epoch(model, spatial_loader, flow_loader, criterion, optimizer, device
     total = 0
     
     for (spatial_frames, _), (flow_frames, labels) in zip(spatial_loader, flow_loader):
-        spatial_frames = spatial_frames.to(device)
-        flow_frames = flow_frames.to(device)
+        # Move to device and get dimensions
+        spatial_frames = spatial_frames.to(device)  # [B, C, T, H, W]
+        flow_frames = flow_frames.to(device)       # [B, C_flow, H, W]
         labels = labels.to(device)
         
-        optimizer.zero_grad()
-        outputs = model(spatial_frames, flow_frames)
-        loss = criterion(outputs, labels)
+        B, C, T, H, W = spatial_frames.size()
         
+        # print(f"Original spatial shape: {spatial_frames.shape}")
+        # print(f"Original flow shape: {flow_frames.shape}")
+        
+        # Handle spatial frames
+        spatial_frames = spatial_frames.transpose(1, 2)  # [B, T, C, H, W]
+        spatial_frames = spatial_frames.reshape(-1, C, H, W)  # [B*T, C, H, W]
+        
+        # Get flow dimensions 
+        B_flow, C_flow, H_flow, W_flow = flow_frames.size()  # [32, 18, 64, 64]
+        # print(f"Flow frame shape: {flow_frames.shape}")
+        
+        # Handle temporal frames - replicate across time dimension
+        flow_frames = flow_frames.unsqueeze(1)  # [B, 1, C_flow, H, W]
+        flow_frames = flow_frames.expand(-1, T, -1, -1, -1)  # [B, T, C_flow, H, W]
+        flow_frames = flow_frames.reshape(B*T, -1, H_flow, W_flow)  # [B*T, C_flow, H, W]
+        
+        # Resize flow frames to match spatial resolution
+        if H_flow != H or W_flow != W:
+            flow_frames = F.interpolate(flow_frames, size=(H, W), 
+                                      mode='bilinear', align_corners=False)
+        
+        # print(f"Processed spatial shape: {spatial_frames.shape}")
+        # print(f"Processed flow shape: {flow_frames.shape}")
+        
+        optimizer.zero_grad()
+        outputs = model(spatial_frames, flow_frames)  # [B*T, num_classes]
+        
+        # Average predictions across time dimension
+        outputs = outputs.view(B, T, -1)  # [B, T, num_classes]
+        outputs = outputs.mean(dim=1)     # [B, num_classes]
+        
+        loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
         
@@ -104,7 +122,7 @@ def train_epoch(model, spatial_loader, flow_loader, criterion, optimizer, device
     return total_loss / len(spatial_loader), 100. * correct / total
 
 def main():
-    wandb.init(project="two-stream-network", config=config)
+    wandb.init(project="two_stream", config=config, name="two_stream")
     
     # Setup
     device = config['device']
