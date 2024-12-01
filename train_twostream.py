@@ -34,33 +34,28 @@ config = dict(
     }
 )
 
-def get_transforms():
+def get_transform():
     spatial_transform = T.Compose([
         T.Resize((224, 224)),
-        T.RandomHorizontalFlip(),
         T.ToTensor(),
         T.Normalize(mean=[0.485, 0.456, 0.406], 
                    std=[0.229, 0.224, 0.225])
     ])
     
-    flow_transform = T.Compose([
-        T.Resize((224, 224)),
-        T.ToTensor(),
-        T.Normalize(mean=[0.5], std=[0.5])
-    ])
-    
-    return spatial_transform, flow_transform
+    return spatial_transform
 
-def get_dataloaders(root_dir, batch_size, num_frames):
-    spatial_transform, flow_transform = get_transforms()
-    
-    # Create datasets
-    spatial_dataset = FrameVideoDataset(root_dir=os.path.join(root_dir, "frames"))
-    flow_dataset = FlowVideoDataset(root_dir=os.path.join(root_dir, "flows"))
-    
+def get_dataloaders(root_dir, batch_size, num_frames, mode):
+    spatial_transform = get_transform()
+    if mode == 'train':
+        # Create datasets
+        spatial_dataset = FrameVideoDataset(root_dir=os.path.join(root_dir, "frames"), split='train', transform=spatial_transform)
+        flow_dataset = FlowVideoDataset(root_dir=os.path.join(root_dir, "flows"), split='train')
+    else:
+        spatial_dataset = FrameVideoDataset(root_dir=os.path.join(root_dir, "frames"), split='val', transform=spatial_transform)
+        flow_dataset = FlowVideoDataset(root_dir=os.path.join(root_dir, "flows"), split='val')
+
     # Create dataloaders
     spatial_loader = DataLoader(spatial_dataset, batch_size=batch_size, shuffle=True)
-    
     flow_loader = DataLoader(flow_dataset, batch_size=batch_size, shuffle=True)
     
     return spatial_loader, flow_loader
@@ -184,12 +179,20 @@ def main():
     # root_dir = "../ufc10"
     
     # Get dataloaders
-    spatial_loader, flow_loader = get_dataloaders(
+    spatial_loader_train, flow_loader_train = get_dataloaders(
         root_dir, 
         config['batch_size'],
-        config['num_frames']
+        config['num_frames'],
+        mode='train'
     )
     
+    spatial_loader_val, flow_loader_val = get_dataloaders(
+        root_dir, 
+        config['batch_size'],
+        config['num_frames'],
+        mode='val'
+    )
+
     # Initialize model
     model = TwoStream(
         hyperparameters=config['hyperparameters'],
@@ -205,12 +208,12 @@ def main():
     best_acc = 0
     for epoch in range(config['epochs']):
         train_loss, train_acc = train_epoch(
-            model, spatial_loader, flow_loader, 
+            model, spatial_loader_train, flow_loader_train, 
             criterion, optimizer, device
         )
 
         val_loss, val_acc = validate_epoch(
-            model, spatial_loader, flow_loader, 
+            model, spatial_loader_val, flow_loader_val, 
             criterion, device
         )
         
@@ -224,8 +227,8 @@ def main():
         })
         
         # Save checkpoint if best accuracy
-        if train_acc > best_acc:
-            best_acc = train_acc
+        if val_acc > best_acc:
+            best_acc = val_acc
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
@@ -235,6 +238,7 @@ def main():
         
         # Update learning rate
         scheduler.step(train_acc)
+        print(f"Epoch {epoch + 1}/{config['epochs']} | Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}% | Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
         
 if __name__ == '__main__':
     main()
