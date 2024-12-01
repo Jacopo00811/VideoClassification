@@ -55,15 +55,13 @@ transform_test = transforms.Compose([
 ])
 
 train_dataset = FrameImageDataset(root_dir=root_dir, split='train', transform=transform)
-val_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
-test_dataset = FrameImageDataset(root_dir=root_dir, split='test', transform=transform)
+val_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform_test)
 # framevideostack_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = True)
 # framevideolist_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = False)
 
 
 train_loader = DataLoader(train_dataset,  batch_size=8, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_dataset,  batch_size=8, shuffle=False, num_workers=4)
-test_loader = DataLoader(test_dataset,  batch_size=8, shuffle=False, num_workers=4)
 
 model = Pretrained("VGG16",pretrained=True, freeze_backbone=True)
 
@@ -128,7 +126,7 @@ for epoch in range(epochs):
     total_test = 0
 
     with torch.no_grad():
-        for batch in test_loader:
+        for batch in val_loader:
             inputs, labels = batch[0].to(device), batch[1].to(device)
             outputs = model(inputs)
             if outputs.dim() > 1 and outputs.size(1) == 1:
@@ -146,7 +144,7 @@ for epoch in range(epochs):
             total_test += labels.size(0)
 
     # Calculate average test loss and accuracy for the epoch
-    avg_test_loss = running_loss / len(test_loader)
+    avg_test_loss = running_loss / len(val_loader)
     test_accuracy = 100 * correct_test / total_test
     current_lr = optimizer.param_groups[0]['lr']
     print(f"Epoch {epoch + 1}/{epochs} | Test Loss: {avg_test_loss:.4f} | Test Accuracy: {test_accuracy:.2f}%")

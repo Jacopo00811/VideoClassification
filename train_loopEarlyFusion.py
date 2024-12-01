@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from torchvision import transforms as T
+from torchvision import transforms
 from datasets import FrameVideoDataset
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -43,18 +43,25 @@ root_dir = os.path.join(cwd, "ufc10")
 # root_dir = "../ufc10"
 
 # Define transformations with data augmentation (optional)
-transform = T.Compose([
-    T.Resize((64, 64)),
-    T.RandomHorizontalFlip(),
-    T.RandomRotation(10),
-    T.ToTensor(),
-    T.Normalize(mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225])
+transform = transforms.Compose([
+    transforms.Resize((80, 80)),  # Ensure images are at least slightly larger than crop size
+    transforms.RandomResizedCrop(64,scale=(0.8, 1.0), ratio=(0.75, 1.33)), # Better size for ResNet101
+    transforms.RandomRotation(15),
+    transforms.ColorJitter(brightness=0.2,contrast=0.2,saturation=0.2, hue=0.1),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomVerticalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
+transform_test = transforms.Compose([
+    transforms.Resize((64,64)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 # Create the training and validation datasets
 train_dataset = FrameVideoDataset(root_dir=root_dir, split='train', transform=transform, stack_frames=True)
-val_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames=True)
+val_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform_test, stack_frames=True)
 
 # Create the data loaders
 train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
