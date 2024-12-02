@@ -44,18 +44,17 @@ root_dir = os.path.join(cwd, "ufc10")
 
 # Define transformations with data augmentation (optional)
 transform = transforms.Compose([
-    transforms.Resize((80, 80)),  # Ensure images are at least slightly larger than crop size
-    transforms.RandomResizedCrop(64,scale=(0.8, 1.0), ratio=(0.75, 1.33)), # Better size for ResNet101
+    transforms.Resize((250,250)),  # Ensure images are at least slightly larger than crop size
+    transforms.RandomResizedCrop(224,scale=(0.8, 1.0), ratio=(0.75, 1.33)), # Better size for ResNet101
     transforms.RandomRotation(15),
     transforms.ColorJitter(brightness=0.2,contrast=0.2,saturation=0.2, hue=0.1),
     transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
 transform_test = transforms.Compose([
-    transforms.Resize((64,64)),
+    transforms.Resize((224,224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
