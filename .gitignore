@@ -163,6 +163,7 @@ cython_debug/
 
 
 ufc10/
+ucf101_noleakage/
 *.DS_Store
 wandb/
 saved_models/

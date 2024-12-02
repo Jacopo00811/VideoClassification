@@ -5,90 +5,115 @@ import pandas as pd
 from PIL import Image
 import torch
 from torchvision import transforms as T
-import os
-import torch.nn.functional as F
+import torch.nn.functional as F 
 
 class FrameImageDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir = 'dtu/datasets1/02516/ucf101_noleakage',
-    split='train', 
-    transform=None
-): 
-        target_dir = '/dtu/datasets1/02516/ucf101_noleakage'  # Absolute path starting from root
-        self.frame_paths = sorted(glob(f'{target_dir}/frames/{split}/*/*/*.jpg'))
-        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
+        root_dir='/ucf101_noleakage',
+        split='train', 
+        transform=None
+    ): 
+        self.base_dir = root_dir
+        metadata_file = os.path.join(self.base_dir, "metadata", f"{split}.csv")
+        self.frame_paths = sorted(glob(os.path.join(self.base_dir, "frames", split, "*", "*", "*.jpg")))
+        self.df = pd.read_csv(metadata_file)
         self.split = split
         self.transform = transform
-        # breakpoint()
        
     def __len__(self):
         return len(self.frame_paths)
 
     def _get_meta(self, attr, value):
-        return self.df.loc[self.df[attr] == value]
+        matches = self.df.loc[self.df[attr] == value]
+        if len(matches) == 0:
+            raise ValueError(f"No metadata found for {attr}={value}")
+        return {'label': matches.iloc[0]['label']}
 
     def __getitem__(self, idx):
         frame_path = self.frame_paths[idx]
+        video_name = os.path.basename(os.path.dirname(frame_path))
         
-        video_name = frame_path.split('/')[-2]
-        video_meta = self._get_meta('video_name', video_name)
-        label = video_meta['label'].item()
-        
-        frame = Image.open(frame_path).convert("RGB")
+        try:
+            video_meta = self._get_meta('video_name', video_name)
+            label = video_meta['label']
+            
+            frame = Image.open(frame_path).convert("RGB")
 
-        if self.transform:
-            frame = self.transform(frame)
-        else:
-            frame = T.ToTensor()(frame)
+            if self.transform:
+                frame = self.transform(frame)
+            else:
+                frame = T.ToTensor()(frame)
 
-        return frame, label
-
+            return frame, label
+        except Exception as e:
+            print(f"Error processing frame {frame_path}")
+            print(f"Video name extracted: {video_name}")
+            print(f"Available video names:", self.df['video_name'].unique()[:5])
+            raise
 
 class FrameVideoDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='/dtu/datasets1/02516/ucf101_noleakage',
-    split = 'train', 
-    transform = None,
-    stack_frames = True
-):
-        target_dir = '/dtu/datasets1/02516/ucf101_noleakage'  # Absolute path starting from root
-
-        if not os.path.exists(target_dir):
-            raise FileNotFoundError(f"Dataset directory not found: {target_dir}")
-        
-        self.video_paths = sorted(glob(f'{target_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
+        root_dir='/ucf101_noleakage',
+        split='train', 
+        transform=None,
+        stack_frames=True
+    ):
+        self.base_dir = os.path.dirname(root_dir)  # Go up one level since root_dir is frames dir
+        self.frames_dir = root_dir
         self.split = split
         self.transform = transform
         self.stack_frames = stack_frames
-        
         self.n_sampled_frames = 10
 
+        video_dir = os.path.join(self.base_dir, "videos")
+        metadata_file = os.path.join(self.base_dir, "metadata", f"{split}.csv")
+        
+        if not os.path.exists(metadata_file):
+            raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
+            
+        self.video_paths = sorted(glob(os.path.join(video_dir, split, "*", "*.avi")))
+        self.df = pd.read_csv(metadata_file)
+
+        print(f"Loaded {len(self.video_paths)} videos and {len(self.df)} metadata entries")
+        
     def __len__(self):
         return len(self.video_paths)
     
     def _get_meta(self, attr, value):
-        return self.df.loc[self.df[attr] == value]
+        matches = self.df.loc[self.df[attr] == value]
+        print(f"Looking for {attr}={value}")
+        print(f"Found {len(matches)} matches")
+        if len(matches) > 0:
+            print(f"First match: {matches.iloc[0].to_dict()}")
+            return {'label': matches.iloc[0]['label']}
+        raise ValueError(f"No metadata found for {attr}={value}")
 
     def __getitem__(self, idx):
         video_path = self.video_paths[idx]
-        video_name = video_path.split('/')[-1].split('.avi')[0]
-        video_meta = self._get_meta('video_name', video_name)
-        label = video_meta['label'].item()
-
-        video_frames_dir = self.video_paths[idx].split('.avi')[0].replace('videos', 'frames')
-        video_frames = self.load_frames(video_frames_dir)
-
-        if self.transform:
-            frames = [self.transform(frame) for frame in video_frames]
-        else:
-            frames = [T.ToTensor()(frame) for frame in video_frames]
+        video_name = os.path.basename(video_path).replace('.avi', '')
         
-        if self.stack_frames:
-            frames = torch.stack(frames).permute(1, 0, 2, 3)
+        try:
+            video_meta = self._get_meta('video_name', video_name)
+            label = video_meta['label']
+            
+            frames_dir = video_path.replace('videos', 'frames').replace('.avi', '')
+            video_frames = self.load_frames(frames_dir)
 
+            if self.transform:
+                frames = [self.transform(frame) for frame in video_frames]
+            else:
+                frames = [T.ToTensor()(frame) for frame in video_frames]
+            
+            if self.stack_frames:
+                frames = torch.stack(frames).permute(1, 0, 2, 3)
 
-        return frames, label
+            return frames, label
+            
+        except Exception as e:
+            print(f"Error processing video {video_name}")
+            print(f"Video path: {video_path}")
+            print(f"DataFrame matches:", self.df[self.df['video_name'] == video_name])
+            raise
     
     def load_frames(self, frames_dir):
         frames = []
@@ -96,46 +121,66 @@ class FrameVideoDataset(torch.utils.data.Dataset):
             frame_file = os.path.join(frames_dir, f"frame_{i}.jpg")
             frame = Image.open(frame_file).convert("RGB")
             frames.append(frame)
-
         return frames
-
 
 class FlowVideoDataset(torch.utils.data.Dataset):
     def __init__(self, 
-    root_dir='dtu/datasets1/02516/ucf101_noleakage',
-    split = 'train', 
-    resize = (64,64),
-):
-        
-        target_dir = "/dtu/datasets1/02516/ucf101_noleakage"
-
-        self.video_paths = sorted(glob(f'{target_dir}/videos/{split}/*/*.avi'))
-        self.df = pd.read_csv(f'{target_dir}/metadata/{split}.csv')
+        root_dir='/ucf101_noleakage',
+        split='train', 
+        resize=(64,64)
+    ):
+        self.base_dir = os.path.dirname(root_dir)  # Go up one level since root_dir is flows dir
+        self.flows_dir = root_dir
         self.split = split
         self.resize = resize    
         self.n_sampled_frames = 10
+
+        video_dir = os.path.join(self.base_dir, "videos")
+        metadata_file = os.path.join(self.base_dir, "metadata", f"{split}.csv")
+        
+        if not os.path.exists(metadata_file):
+            raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
+            
+        self.video_paths = sorted(glob(os.path.join(video_dir, split, "*", "*.avi")))
+        self.df = pd.read_csv(metadata_file)
+
+        print(f"Loaded {len(self.video_paths)} videos and {len(self.df)} metadata entries")
 
     def __len__(self):
         return len(self.video_paths)
     
     def _get_meta(self, attr, value):
-        return self.df.loc[self.df[attr] == value]
+        matches = self.df.loc[self.df[attr] == value]
+        print(f"Looking for {attr}={value}")
+        print(f"Found {len(matches)} matches")
+        if len(matches) > 0:
+            print(f"First match: {matches.iloc[0].to_dict()}")
+            return {'label': matches.iloc[0]['label']}
+        raise ValueError(f"No metadata found for {attr}={value}")
 
     def __getitem__(self, idx):
         video_path = self.video_paths[idx]
-        video_name = video_path.split('/')[-1].split('.avi')[0]
-        video_meta = self._get_meta('video_name', video_name)
-        label = video_meta['label'].item()
+        video_name = os.path.basename(video_path).replace('.avi', '')
+        
+        try:
+            video_meta = self._get_meta('video_name', video_name)
+            label = video_meta['label']
+            
+            flows_dir = video_path.replace('videos', 'flows').replace('.avi', '')
+            flows = self.load_flows(flows_dir)
 
-        video_flows_dir = self.video_paths[idx].split('.avi')[0].replace('videos', 'flows')
-        flows = self.load_flows(video_flows_dir)
-
-        return flows, label
+            return flows, label
+            
+        except Exception as e:
+            print(f"Error processing video {video_name}")
+            print(f"Video path: {video_path}")
+            print(f"DataFrame matches:", self.df[self.df['video_name'] == video_name])
+            raise
 
     def load_flows(self, flows_dir):
         flows = []
         for i in range(1, self.n_sampled_frames):
-            flow_file = os.path.join(f'{flows_dir}', f"flow_{i}_{i+1}.npy")
+            flow_file = os.path.join(flows_dir, f"flow_{i}_{i+1}.npy")
             flow = np.load(flow_file)
             flow = torch.from_numpy(flow)
             flows.append(flow)
@@ -144,36 +189,4 @@ class FlowVideoDataset(torch.utils.data.Dataset):
         if self.resize:
             flows = F.interpolate(flows, size=self.resize, mode='bilinear')
 
-        return flows.flatten(0,1)
-
-# if __name__ == '__main__':
-#     from torch.utils.data import DataLoader
-
-#     root_dir='dtu/datasets1/02516/ucf101_noleakage',
-
-#     transform = T.Compose([T.Resize((64, 64)),T.ToTensor()])
-#     frameimage_dataset = FrameImageDataset(root_dir=root_dir, split='val', transform=transform)
-#     framevideostack_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = True)
-#     framevideolist_dataset = FrameVideoDataset(root_dir=root_dir, split='val', transform=transform, stack_frames = False)
-#     flowvideo_dataset = FlowVideoDataset(root_dir=root_dir, split='val', resize=(64,64))
-
-
-#     frameimage_loader = DataLoader(frameimage_dataset,  batch_size=8, shuffle=False)
-#     framevideostack_loader = DataLoader(framevideostack_dataset,  batch_size=8, shuffle=False)
-#     framevideolist_loader = DataLoader(framevideolist_dataset,  batch_size=8, shuffle=False)
-#     flowvideo_loader = DataLoader(flowvideo_dataset,  batch_size=8, shuffle=False)
-
-#     for frames, labels in frameimage_loader:
-#         print(frames.shape, labels.shape) # [batch, channels, height, width]
-
-#     for video_frames, labels in framevideolist_loader:
-#         print(45*'-')
-#         for frame in video_frames: # loop through number of frames
-#             print(frame.shape, labels.shape)# [batch, channels, height, width]
-
-#     for video_frames, labels in framevideostack_loader:
-#         print(video_frames.shape, labels.shape) # [batch, channels, number of frames, height, width]
-
-#     for flows, labels in flowvideo_loader:
-#         print(flows.shape, labels.shape) # [2 * (number of frames-1) , height, width]
-            
+        return flows.flatten(0, 1)
